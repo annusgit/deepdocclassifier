@@ -69,7 +69,9 @@ def interface():
     print(new_image, classified_images, scores, pred)
     title = 'Prediction = {}'.format(reverse_labels[pred]) if evaluated \
         else 'No scores were evaluated \n because either an image was already processed or we have just begun!!!'
-    return render_template('test.html', title=title, max=max(scores), labels=labels.keys(), values=scores)
+    return render_template('test.html', title=title, max=max(scores),
+                           labels=[reverse_labels[x] for x in range(10)],
+                           values=scores)
 
 
 labels = {
@@ -118,7 +120,7 @@ def single_inference(image):
     # print(example_array.shape)
     example_array = transform(toTensor(example_array)).unsqueeze(0)
     out_x, pred = model(example_array)
-    return (F.softmax(out_x, dim=1).numpy()*10000).astype(np.uint8).tolist()[0], int(pred.numpy())
+    return (F.softmax(out_x, dim=1).numpy()*1000).astype(np.float32).tolist()[0], int(pred.numpy())
 
 
 if __name__ == '__main__':
