@@ -107,7 +107,7 @@ def get_dataloaders(base_folder, batch_size):
         def __getitem__(self, k):
             example_path, label_name = self.example_dictionary[k]
             example_array = Image.open(example_path).resize((227,227))
-            example_array = np.asarray(example_array).astype(np.uint8)*255
+            example_array = np.asarray(example_array).astype(np.uint8)*1
             example_array = np.dstack((example_array, example_array, example_array))
             example_array = seq.augment_image(example_array) # augmentation using imgaug
             ###########################################
@@ -122,7 +122,7 @@ def get_dataloaders(base_folder, batch_size):
             # example_array = cv2.resize(example_array, 227, 227)
             this_label = all_labels[label_name]
             example_array = toTensor(image=example_array)
-            # example_array = self.transform(example_array)
+            example_array = self.transform(example_array)
             return {'input': example_array, 'label': this_label}
 
         def __len__(self):
