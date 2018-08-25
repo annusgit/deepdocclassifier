@@ -1,1 +1,53 @@
-<h1>Hello {{name}}</h1>
+
+<!DOCTYPE html>
+<html lang="en">
+
+<!--this is the uploading part-->
+<title>Upload new File</title>
+<h1>Upload new File</h1>
+<form action="" method=post enctype=multipart/form-data>
+    <p><input type=file name=file>
+        <input type=submit value=Upload>
+</form>
+
+
+<!--
+    The following was copied from index.html
+-->
+<!--<head>-->
+  <!--<meta charset="UTF-8">-->
+  <!--<title>Sightengine demo - Python and Flask</title>-->
+  <!--<link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='styles/app.css') }}">-->
+<!--</head>-->
+
+<!--<body>-->
+<!--<header class="navbar">-->
+  <!--<form action="/upload" method="post" enctype="multipart/form-data" >-->
+      <!--<span class="btn btn-default btn-file">-->
+        <!--Browse <input type="file" name="image">-->
+      <!--</span>-->
+
+    <!--<input type="submit" value="Upload your image" class="btn btn-primary">-->
+  <!--</form>-->
+
+  <!--<span class="navbar-text"> Image moderation with-->
+      <!--<a href="https://sightengine.com/">Sightengine</a>-->
+  <!--</span>-->
+<!--</header>-->
+<!-- until here... -->
+
+
+<!-- this is our actual code -->
+{% extends "layout.html" %}
+{% block body %}
+
+<body>
+<div class="block1">
+<h1>Ready to test me???</h1>
+  <h2>Give me an image and make me think!</h2>
+<img src="https://cdn-images-1.medium.com/max/800/1*dnvGC-PORSoCo7VXT3PV_A.png">
+</div>
+{% endblock %}
+
+</body>
+</html>
