@@ -4,8 +4,8 @@
 from __future__ import print_function
 from __future__ import division
 import os
-# import cv2
-import gdal
+import cv2
+import PIL.Image as Image
 # import json
 import torch
 import random
@@ -15,6 +15,7 @@ import matplotlib.pyplot as pl
 from torch.utils.data import Dataset, DataLoader
 import imgaug as ia
 from imgaug import augmenters as iaa
+import torchvision.transforms as transforms
 
 
 # will implement all functionality (data augmentation) of doing
@@ -22,17 +23,18 @@ from imgaug import augmenters as iaa
 # 2. random flips,
 # 3. random rotations,
 
+
 all_labels = {
-            'AnnualCrop'           : 0,
-            'Forest'               : 1,
-            'HerbaceousVegetation' : 2,
-            'Highway'              : 3,
-            'Industrial'           : 4,
-            'Pasture'              : 5,
-            'PermanentCrop'        : 6,
-            'Residential'          : 7,
-            'River'                : 8,
-            'SeaLake'              : 9
+            'ADVE'        : 0,
+            'Email'       : 1,
+            'Form'        : 2,
+            'Letter'      : 3,
+            'Memo'        : 4,
+            'News'        : 5,
+            'Note'        : 6,
+            'Report'      : 7,
+            'Resume'      : 8,
+            'Scientific'  : 9
             }
 
 def toTensor(image):
@@ -44,82 +46,83 @@ def toTensor(image):
     return torch.from_numpy(image).float()
 
 ######################################################################################################
+# Define our sequence of augmentation steps that will be applied to every image.
+# random example images
+# images = np.random.randint(0, 255, (16, 128, 128, 3), dtype=np.uint8)
+
 # Sometimes(0.5, ...) applies the given augmenter in 50% of all cases,
-# e.g. Sometimes(0.5, GaussianBlur(0.3)) would blur roughly every second
-# image.
+# e.g. Sometimes(0.5, GaussianBlur(0.3)) would blur roughly every second image.
 sometimes = lambda aug: iaa.Sometimes(0.5, aug)
 
-# Define our sequence of augmentation steps that will be applied to every image.
+# Define our sequence of augmentation steps that will be applied to every image
+# All augmenters with per_channel=0.5 will sample one value _per image_
+# in 50% of all cases. In all other cases they will sample new values
+# _per channel_.
 seq = iaa.Sequential(
     [
-        #
-        # Apply the following augmenters to most images.
-        #
-        iaa.Fliplr(0.5), # horizontally flip 50% of all images
-        iaa.Flipud(0.5), # vertically flip 50% of all images
-
-        # crop some of the images by 0-20% of their height/width
-        sometimes(iaa.Crop(percent=(0, 0.2))),
-
-        # Apply affine transformations to some of the images
-        # - scale to 80-120% of image height/width (each axis independently)
-        # - translate by -20 to +20 relative to height/width (per axis)
-        # - rotate by -45 to +45 degrees
-        # - mode: use any available mode to fill newly created pixels
-        #         see API or scikit-image for which modes are available
-        sometimes(iaa.Affine(
-            scale={"x": (0.8, 1.2), "y": (0.8, 1.2)},
-            translate_percent={"x": (-0.2, 0.2), "y": (-0.2, 0.2)},
-            rotate=(-180, 175),
-            mode=ia.ALL
-        )),
+        # execute 0 to 5 of the following (less important) augmenters per image
+        # don't execute all of them, as that would often be way too strong
+        iaa.SomeOf((0, 5),
+            [
+                iaa.OneOf([
+                    iaa.GaussianBlur((0, 1.0)), # blur images with a sigma between 0 and 3.0
+                    iaa.AverageBlur(k=(2, 3)), # blur image using local means with kernel sizes between 2 and 7
+                    iaa.MedianBlur(k=(1, 3)), # blur image using local medians with kernel sizes between 2 and 7
+                ]),
+                # iaa.AdditiveGaussianNoise(loc=0, scale=(0.0, 0.05*255), per_channel=0.5), # add gaussian noise to images
+                iaa.OneOf([
+                    iaa.Dropout((0.01, 0.05), per_channel=0.5), # randomly remove up to 10% of the pixels
+                ]),
+                iaa.Add((-10, 10), per_channel=0.5), # change brightness of images (by -10 to 10 of original value)
+                # # either change the brightness of the whole image (sometimes
+                # # per channel) or change the brightness of subareas
+                iaa.OneOf([
+                    # iaa.Multiply((0.5, 1.5), per_channel=0.5),
+                    iaa.FrequencyNoiseAlpha(
+                        exponent=(-4, 0),
+                        first=iaa.Multiply((0.8, 1.2), per_channel=True),
+                        second=iaa.ContrastNormalization((0.8, 1.2))
+                    )
+                ]),
+                iaa.ContrastNormalization((0.8, 1.2), per_channel=0.5), # improve or worsen the contrast
+            ],
+            random_order=True
+        )
     ],
-    # do all of the above augmentations in random order
     random_order=True
 )
+
 ######################################################################################################
 
 def get_dataloaders(base_folder, batch_size):
     print('inside dataloading code...')
 
     class dataset(Dataset):
-        def __init__(self, data_dictionary, bands, mode='train'):
+        def __init__(self, data_dictionary):
             super(dataset, self).__init__()
             self.example_dictionary = data_dictionary
-            # with open(mode+'.txt', 'wb') as this:
-            #     this.write(json.dumps(self.example_dictionary))
-            self.bands = bands # bands are a list bands to use as data, pass them as a list []
-            self.mode = mode
-            self.max = 0
+            self.transform = transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
             pass
 
         def __getitem__(self, k):
             example_path, label_name = self.example_dictionary[k]
-            # print(example_path, label_name)
-            # example is a tiff image, need to use gdal
-            this_example = gdal.Open(example_path)
+            example_array = Image.open(example_path).resize((227,227))
+            example_array = np.asarray(example_array).astype(np.uint8)*255
+            example_array = np.dstack((example_array, example_array, example_array))
+            example_array = seq.augment_image(example_array) # augmentation using imgaug
+            ###########################################
+            # print(np.unique(example_array))
+            # pl.imshow(example_array)
+            # pl.show()
+            ##########################################3
+            # example_array = example_array.resize((227, 227), Image.BILINEAR)
+            ### stack them depth-wise (from paper)
+            # print(example_array.dtype)
+            # example_array = np.resize(example_array, new_shape=(227,227,3))
+            # example_array = cv2.resize(example_array, 227, 227)
             this_label = all_labels[label_name]
-            example_array = this_example.GetRasterBand(self.bands[0]).ReadAsArray()
-            for i in self.bands[1:]:
-                example_array = np.dstack((example_array,
-                                           this_example.GetRasterBand(i).ReadAsArray())).astype(np.int16)
-
-            # transforms
-            if self.mode == 'train':
-                example_array = np.squeeze(seq.augment_images(
-                    (np.expand_dims(example_array, axis=0))), axis=0)
-                pass
-
-            # range of vals = [0,1]
-            example_array = (example_array.astype(np.float)/4096)
-
-            # max value in test set is 28000
-            # this_max = example_array.max()
-            # if this_max > self.max:
-            #     self.max = this_max
-            # print(example_array.max(), example_array.min(), example_array.mean())
-
             example_array = toTensor(image=example_array)
+            # example_array = self.transform(example_array)
             return {'input': example_array, 'label': this_label}
 
         def __len__(self):
@@ -127,9 +130,10 @@ def get_dataloaders(base_folder, batch_size):
 
     # create training set examples dictionary
     all_examples = {}
-    for folder in sorted(os.listdir(base_folder)):
+    for folder in sorted([t for t in os.listdir(base_folder) if t in all_labels.keys()]): #
         # each folder name is a label itself
         # new folder, new dictionary!
+        # print(folder)
         class_examples = []
         inner_path = os.path.join(base_folder, folder)
         for image in [x for x in os.listdir(inner_path) if x.endswith('.tif')]:
@@ -144,11 +148,9 @@ def get_dataloaders(base_folder, batch_size):
         class_examples = all_examples[class_name]
         # print(class_examples)
         random.shuffle(class_examples)
-
         total = len(class_examples)
         train_count = int(total * 0.8); train_ = class_examples[:train_count]
         test = class_examples[train_count:]
-
         total = len(train_)
         train_count = int(total * 0.9); train = train_[:train_count]
         validation = train_[train_count:]
@@ -160,12 +162,11 @@ def get_dataloaders(base_folder, batch_size):
         for example in validation:
             val_dictionary[len(val_dictionary)] = (example, class_name)
 
-
     # create dataset class instances
-    bands = [4, 3, 2]
-    train_data = dataset(data_dictionary=train_dictionary, bands=bands, mode='train')
-    val_data = dataset(data_dictionary=val_dictionary, bands=bands, mode='eval')
-    test_data = dataset(data_dictionary=test_dictionary, bands=bands, mode='test')
+    # print(train_dictionary)
+    train_data = dataset(data_dictionary=train_dictionary)
+    val_data = dataset(data_dictionary=val_dictionary)
+    test_data = dataset(data_dictionary=test_dictionary)
     print('train examples =', len(train_dictionary), 'val examples =', len(val_dictionary),
           'test examples =', len(test_dictionary))
 
@@ -240,13 +241,13 @@ def histogram_equalization(in_image):
 
 
 def main():
-    train_dataloader, val_dataloader, test_dataloader = get_dataloaders(base_folder='/home/annus/Desktop/'
-                                                                                    'forest_cover_change/'
-                                                                                    'eurosat/images/tif',
-                                                                        batch_size=1)
+    # train_dataloader, val_dataloader, test_dataloader = get_dataloaders(base_folder='/home/annus/Desktop/'
+    #                                                                                 'forest_cover_change/'
+    #                                                                                 'eurosat/images/tif',
+    #                                                                     batch_size=1)
     # #
-    # train_dataloader, val_dataloader, test_dataloader = get_dataloaders(base_folder='Eurosat/tif/',
-    #                                                                     batch_size=16)
+    train_dataloader, val_dataloader, test_dataloader = get_dataloaders(base_folder='../dataset',
+                                                                        batch_size=16)
 
     count = 0
     reversed_labels = {v:k for k, v in all_labels.iteritems()}
@@ -256,12 +257,11 @@ def main():
             examples, labels = data['input'], data['label']
             print('{} -> on batch {}/{}, {}'.format(count, idx+1, len(train_dataloader), examples.size()))
             if True:
-                this = np.max(examples[0].numpy())
-                print(this)
-                this = (examples[0].numpy()*255).transpose(1,2,0).astype(np.uint8)
-                # this = histogram_equalization(this)
+                this = (examples[0].numpy()).transpose(1,2,0).astype(np.uint8)
+                print(this.max(), np.unique(this))
+                # print(this)
                 pl.imshow(this)
-                pl.title('{}'.format(reversed_labels[int(labels.numpy())]))
+                pl.title('{}'.format(reversed_labels[int(labels[0].numpy())]))
                 pl.show()
 
 
@@ -287,7 +287,7 @@ def check_inference_loader():
 
 
 if __name__ == '__main__':
-    check_inference_loader()
+    main()
 
 
 

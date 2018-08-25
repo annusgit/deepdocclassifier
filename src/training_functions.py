@@ -26,7 +26,7 @@ def train_net(model, base_folder, pre_model, save_dir, batch_size, lr, log_after
         model.cuda(device=device)
         print('log: training started on device: {}'.format(device))
     # define loss and optimizer
-    optimizer = Adam(model.parameters(), lr=lr)
+    optimizer = Adam(model.parameters(), lr=lr, weight_decay=0.0005)
     criterion = nn.CrossEntropyLoss()
     train_loader, val_dataloader, test_loader = get_dataloaders(base_folder=base_folder,
                                                                 batch_size=batch_size)

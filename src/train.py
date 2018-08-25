@@ -7,8 +7,6 @@ from model import *
 import argparse
 
 if __name__ == '__main__':
-
-    # parse
     parser = argparse.ArgumentParser()
     parser.add_argument('--function', dest='function', default='train_net')
     parser.add_argument('--data_path', dest='data_path', default=None)
@@ -20,7 +18,6 @@ if __name__ == '__main__':
     parser.add_argument('-c', '--cuda', dest='cuda', default=0)
     parser.add_argument('--device', dest='device', default=0)
     args = parser.parse_args()
-
     function = args.function
     data_path = args.data_path
     pre_model = args.pre_model
@@ -30,19 +27,10 @@ if __name__ == '__main__':
     log_after = int(args.log_after)
     cuda = int(args.cuda)
     device = int(args.device)
-
     function_to_call = eval(function)
-    net = ResNet(in_channels=3)
-
-    function_to_call(model=net,
-                     base_folder=data_path,
-                     pre_model=pre_model,
-                     save_dir=save_dir,
-                     batch_size=batch_size,
-                     lr=lr,
-                     log_after=log_after,
-                     cuda=cuda,
-                     device=device)
+    net = DeepDocClassifier()
+    function_to_call(model=net, base_folder=data_path, pre_model=pre_model, save_dir=save_dir,
+                     batch_size=batch_size, lr=lr, log_after=log_after, cuda=cuda, device=device)
 
 
 
