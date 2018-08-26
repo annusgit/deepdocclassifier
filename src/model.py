@@ -21,7 +21,9 @@ class DeepDocClassifier(nn.Module):
         for child in feature_extracter:
             self.feature_extracter.append(child)
             if isinstance(child, nn.Conv2d):
-                self.feature_extracter.append(nn.LocalResponseNorm(size=5, alpha=10e-4, beta=0.75, k=2))
+                self.feature_extracter.append(nn.LocalResponseNorm(size=10, alpha=10e-4, beta=0.75, k=2))
+                # self.feature_extracter.append(nn.BatchNorm2d(self.feature_extracter[-1].out_channels))
+        self.feature_extracter[0].padding = (0, 0) # for the first conv layer to match alexnet
         self.feature_extracter = nn.Sequential(*nn.ModuleList(self.feature_extracter))
         classifier = list(pretrained_graph.classifier.children())[:-1]
         classifier.append(nn.Linear(4096, 10))
@@ -54,9 +56,9 @@ def network():
     # see_children_recursively(net.classifier)
     x = torch.Tensor(2, in_channels, patch_size, patch_size)
     ### print network in anyway
-    print(net)
+    # print(net)
     # see_children_recursively(net)
-    # summary(model=net, input_size=(in_channels, patch_size, patch_size))
+    summary(model=net, input_size=(in_channels, patch_size, patch_size))
     ###
     # print(list(nn.BatchNorm2d(num_features=3).children()))
     # print('We need to find {} numbers!'.format(net.count_parameters()))
@@ -70,7 +72,7 @@ def network():
     # print(out.shape, pred.shape)
 
 
-@torch.no_grad()
+# @torch.no_grad()
 def check_on_dataloaders():
     model = DeepDocClassifier()
     model.eval()
@@ -87,6 +89,138 @@ if __name__ == '__main__':
 
 
 
+class SegNet(nn.Module):
+    # SegNet network
+    @staticmethod
+    def weight_init(m):
+        if isinstance(m, nn.Linear):
+            torch.nn.init.kaiming_normal(m.weight.data)
+
+    def __init__(self, in_channels=3, out_channels=7):
+        super(SegNet, self).__init__()
+        self.pool = nn.MaxPool2d(2, return_indices=True)
+        self.unpool = nn.MaxUnpool2d(2)
+
+        self.conv1_1 = nn.Conv2d(in_channels, 64, 3, padding=1)
+        self.conv1_1_bn = nn.BatchNorm2d(64)
+        self.conv1_2 = nn.Conv2d(64, 64, 3, padding=1)
+        self.conv1_2_bn = nn.BatchNorm2d(64)
+
+        self.conv2_1 = nn.Conv2d(64, 128, 3, padding=1)
+        self.conv2_1_bn = nn.BatchNorm2d(128)
+        self.conv2_2 = nn.Conv2d(128, 128, 3, padding=1)
+        self.conv2_2_bn = nn.BatchNorm2d(128)
+
+        self.conv3_1 = nn.Conv2d(128, 256, 3, padding=1)
+        self.conv3_1_bn = nn.BatchNorm2d(256)
+        self.conv3_2 = nn.Conv2d(256, 256, 3, padding=1)
+        self.conv3_2_bn = nn.BatchNorm2d(256)
+        self.conv3_3 = nn.Conv2d(256, 256, 3, padding=1)
+        self.conv3_3_bn = nn.BatchNorm2d(256)
+
+        self.conv4_1 = nn.Conv2d(256, 512, 3, padding=1)
+        self.conv4_1_bn = nn.BatchNorm2d(512)
+        self.conv4_2 = nn.Conv2d(512, 512, 3, padding=1)
+        self.conv4_2_bn = nn.BatchNorm2d(512)
+        self.conv4_3 = nn.Conv2d(512, 512, 3, padding=1)
+        self.conv4_3_bn = nn.BatchNorm2d(512)
+
+        self.conv5_1 = nn.Conv2d(512, 512, 3, padding=1)
+        self.conv5_1_bn = nn.BatchNorm2d(512)
+        self.conv5_2 = nn.Conv2d(512, 512, 3, padding=1)
+        self.conv5_2_bn = nn.BatchNorm2d(512)
+        self.conv5_3 = nn.Conv2d(512, 512, 3, padding=1)
+        self.conv5_3_bn = nn.BatchNorm2d(512)
+
+        self.conv5_3_D = nn.Conv2d(512, 512, 3, padding=1)
+        self.conv5_3_D_bn = nn.BatchNorm2d(512)
+        self.conv5_2_D = nn.Conv2d(512, 512, 3, padding=1)
+        self.conv5_2_D_bn = nn.BatchNorm2d(512)
+        self.conv5_1_D = nn.Conv2d(512, 512, 3, padding=1)
+        self.conv5_1_D_bn = nn.BatchNorm2d(512)
+
+        self.conv4_3_D = nn.Conv2d(512, 512, 3, padding=1)
+        self.conv4_3_D_bn = nn.BatchNorm2d(512)
+        self.conv4_2_D = nn.Conv2d(512, 512, 3, padding=1)
+        self.conv4_2_D_bn = nn.BatchNorm2d(512)
+        self.conv4_1_D = nn.Conv2d(512, 256, 3, padding=1)
+        self.conv4_1_D_bn = nn.BatchNorm2d(256)
+
+        self.conv3_3_D = nn.Conv2d(256, 256, 3, padding=1)
+        self.conv3_3_D_bn = nn.BatchNorm2d(256)
+        self.conv3_2_D = nn.Conv2d(256, 256, 3, padding=1)
+        self.conv3_2_D_bn = nn.BatchNorm2d(256)
+        self.conv3_1_D = nn.Conv2d(256, 128, 3, padding=1)
+        self.conv3_1_D_bn = nn.BatchNorm2d(128)
+
+        self.conv2_2_D = nn.Conv2d(128, 128, 3, padding=1)
+        self.conv2_2_D_bn = nn.BatchNorm2d(128)
+        self.conv2_1_D = nn.Conv2d(128, 64, 3, padding=1)
+        self.conv2_1_D_bn = nn.BatchNorm2d(64)
+
+        self.conv1_2_D = nn.Conv2d(64, 64, 3, padding=1)
+        self.conv1_2_D_bn = nn.BatchNorm2d(64)
+        self.conv1_1_D = nn.Conv2d(64, out_channels, 3, padding=1)
+
+        self.apply(self.weight_init)
+
+    def forward(self, x):
+        # Encoder block 1
+        x = self.conv1_1_bn(F.relu(self.conv1_1(x)))
+        x = self.conv1_2_bn(F.relu(self.conv1_2(x)))
+        x, mask1 = self.pool(x)
+
+        # Encoder block 2
+        x = self.conv2_1_bn(F.relu(self.conv2_1(x)))
+        x = self.conv2_2_bn(F.relu(self.conv2_2(x)))
+        x, mask2 = self.pool(x)
+
+        # Encoder block 3
+        x = self.conv3_1_bn(F.relu(self.conv3_1(x)))
+        x = self.conv3_2_bn(F.relu(self.conv3_2(x)))
+        x = self.conv3_3_bn(F.relu(self.conv3_3(x)))
+        x, mask3 = self.pool(x)
+
+        # Encoder block 4
+        x = self.conv4_1_bn(F.relu(self.conv4_1(x)))
+        x = self.conv4_2_bn(F.relu(self.conv4_2(x)))
+        x = self.conv4_3_bn(F.relu(self.conv4_3(x)))
+        x, mask4 = self.pool(x)
+
+        # Encoder block 5
+        x = self.conv5_1_bn(F.relu(self.conv5_1(x)))
+        x = self.conv5_2_bn(F.relu(self.conv5_2(x)))
+        x = self.conv5_3_bn(F.relu(self.conv5_3(x)))
+        x, mask5 = self.pool(x)
+
+        # Decoder block 5
+        x = self.unpool(x, mask5)
+        x = self.conv5_3_D_bn(F.relu(self.conv5_3_D(x)))
+        x = self.conv5_2_D_bn(F.relu(self.conv5_2_D(x)))
+        x = self.conv5_1_D_bn(F.relu(self.conv5_1_D(x)))
+
+        # Decoder block 4
+        x = self.unpool(x, mask4)
+        x = self.conv4_3_D_bn(F.relu(self.conv4_3_D(x)))
+        x = self.conv4_2_D_bn(F.relu(self.conv4_2_D(x)))
+        x = self.conv4_1_D_bn(F.relu(self.conv4_1_D(x)))
+
+        # Decoder block 3
+        x = self.unpool(x, mask3)
+        x = self.conv3_3_D_bn(F.relu(self.conv3_3_D(x)))
+        x = self.conv3_2_D_bn(F.relu(self.conv3_2_D(x)))
+        x = self.conv3_1_D_bn(F.relu(self.conv3_1_D(x)))
+
+        # Decoder block 2
+        x = self.unpool(x, mask2)
+        x = self.conv2_2_D_bn(F.relu(self.conv2_2_D(x)))
+        x = self.conv2_1_D_bn(F.relu(self.conv2_1_D(x)))
+
+        # Decoder block 1
+        x = self.unpool(x, mask1)
+        x = self.conv1_2_D_bn(F.relu(self.conv1_2_D(x)))
+        x = F.log_softmax(self.conv1_1_D(x))
+        return x
 
 
 

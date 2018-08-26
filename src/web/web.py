@@ -9,24 +9,25 @@ import sys
 # sys.path.append('../../src/')
 from werkzeug.utils import secure_filename
 from flask import Flask, flash, redirect, render_template, request, session, abort, url_for
-import sys
-sys.path.insert(0, '../../src/')
-from model import DeepDocClassifier
 import os
-import torch
+import sys
+sys.path.insert(0, '../')
 import logging
+import numpy as np
+from PIL import Image
+from dataset import toTensor
+from model import DeepDocClassifier
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.transforms as transforms
-from PIL import Image
-import numpy as np
-from dataset import toTensor
 
 
 # create model and make it ready for inference
 model = DeepDocClassifier()
-model.load_state_dict(torch.load('/home/annus/Desktop/model-deepdoc.pt', map_location='cpu'))
+model.load_state_dict(torch.load('../model-219.pt', map_location='cpu'))
 model.eval()
+# criterion = nn.CrossEntropyLoss()
 logging.info('model loaded')
 
 
@@ -48,7 +49,8 @@ def check_new_comer(folder_path):
 app = Flask(__name__)
 @app.route('/interface/', methods=['GET', 'POST'])
 def interface():
-    UPLOAD_FOLDER = '/home/annus/PycharmProjects/deepdocclassifier/src/web/uploads'
+    # UPLOAD_FOLDER = '/home/annus/PycharmProjects/deepdocclassifier/src/web/uploads'
+    UPLOAD_FOLDER = 'uploads'
     app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
     basedir = os.path.abspath(os.path.dirname(__file__))
     # begin by checking if we have a new file uploaded by now
@@ -124,7 +126,7 @@ def single_inference(image):
 
 
 if __name__ == '__main__':
-    app.run(debug=True, port=8008)
+    app.run(debug=True, port=8008, host='0.0.0.0')
 
 
 

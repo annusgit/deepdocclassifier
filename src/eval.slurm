@@ -5,7 +5,7 @@
 #NP="-n 1"
 #REQUEST="--mem=4000"
 #SBATCH --gres=gpu:K20Xm:1
-#SBATCH -t 600
+#SBATCH -t 120
 
 module load gcc/latest
 module load nvidia/7.5

@@ -64,27 +64,28 @@ seq = iaa.Sequential(
         # don't execute all of them, as that would often be way too strong
         iaa.SomeOf((0, 5),
             [
-                iaa.OneOf([
-                    iaa.GaussianBlur((0, 1.0)), # blur images with a sigma between 0 and 3.0
-                    iaa.AverageBlur(k=(2, 3)), # blur image using local means with kernel sizes between 2 and 7
-                    iaa.MedianBlur(k=(1, 3)), # blur image using local medians with kernel sizes between 2 and 7
-                ]),
+                # iaa.OneOf([
+                #     iaa.GaussianBlur((0, 1.0)), # blur images with a sigma between 0 and 3.0
+                #     iaa.AverageBlur(k=(2, 3)), # blur image using local means with kernel sizes between 2 and 7
+                #     # iaa.MedianBlur(k=(1, 3)), # blur image using local medians with kernel sizes between 2 and 7
+                # ]),
                 # iaa.AdditiveGaussianNoise(loc=0, scale=(0.0, 0.05*255), per_channel=0.5), # add gaussian noise to images
-                iaa.OneOf([
+                sometimes(iaa.OneOf([
                     iaa.Dropout((0.01, 0.05), per_channel=0.5), # randomly remove up to 10% of the pixels
-                ]),
-                iaa.Add((-10, 10), per_channel=0.5), # change brightness of images (by -10 to 10 of original value)
+                    # iaa.AdditiveGaussianNoise(loc=1, scale=1 * 255, name="SomeOtherNoise"),
+                ])),
+                # iaa.Add((-10, 10), per_channel=0.5), # change brightness of images (by -10 to 10 of original value)
                 # # either change the brightness of the whole image (sometimes
                 # # per channel) or change the brightness of subareas
-                iaa.OneOf([
-                    # iaa.Multiply((0.5, 1.5), per_channel=0.5),
-                    iaa.FrequencyNoiseAlpha(
-                        exponent=(-4, 0),
-                        first=iaa.Multiply((0.8, 1.2), per_channel=True),
-                        second=iaa.ContrastNormalization((0.8, 1.2))
-                    )
-                ]),
-                iaa.ContrastNormalization((0.8, 1.2), per_channel=0.5), # improve or worsen the contrast
+                # iaa.OneOf([
+                #     # iaa.Multiply((0.5, 1.5), per_channel=0.5),
+                #     iaa.FrequencyNoiseAlpha(
+                #         exponent=(-4, 0),
+                #         first=iaa.Multiply((0.8, 1.2), per_channel=True),
+                #         second=iaa.ContrastNormalization((0.8, 1.2))
+                #     )
+                # ]),
+                # iaa.ContrastNormalization((0.8, 1.2), per_channel=0.5), # improve or worsen the contrast
             ],
             random_order=True
         )
@@ -98,18 +99,22 @@ def get_dataloaders(base_folder, batch_size):
     print('inside dataloading code...')
 
     class dataset(Dataset):
-        def __init__(self, data_dictionary):
+        def __init__(self, data_dictionary, mode='train'):
             super(dataset, self).__init__()
             self.example_dictionary = data_dictionary
-            self.transform = transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+            self.mean = map(float, 255*(0.4914, 0.4822, 0.4465)) # mean of imagenet
+            self.std = map(float, 255*(0.2023, 0.1994, 0.2010))  # std of imagenet
+            self.transform = transforms.Normalize(self.mean, self.std)
+            self.mode = mode
             pass
 
         def __getitem__(self, k):
             example_path, label_name = self.example_dictionary[k]
             example_array = Image.open(example_path).resize((227,227))
-            example_array = np.asarray(example_array).astype(np.uint8)*1
+            example_array = np.asarray(example_array).astype(np.float)*255
             example_array = np.dstack((example_array, example_array, example_array))
-            example_array = seq.augment_image(example_array) # augmentation using imgaug
+            if self.mode == 'train':
+                example_array = seq.augment_image(example_array) # augmentation using imgaug
             ###########################################
             # print(np.unique(example_array))
             # pl.imshow(example_array)
@@ -164,9 +169,9 @@ def get_dataloaders(base_folder, batch_size):
 
     # create dataset class instances
     # print(train_dictionary)
-    train_data = dataset(data_dictionary=train_dictionary)
-    val_data = dataset(data_dictionary=val_dictionary)
-    test_data = dataset(data_dictionary=test_dictionary)
+    train_data = dataset(data_dictionary=train_dictionary, mode='train')
+    val_data = dataset(data_dictionary=val_dictionary, mode='no_train')
+    test_data = dataset(data_dictionary=test_dictionary, mode='no_train')
     print('train examples =', len(train_dictionary), 'val examples =', len(val_dictionary),
           'test examples =', len(test_dictionary))
 
