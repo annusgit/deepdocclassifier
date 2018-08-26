@@ -5,4 +5,4 @@ The model demonstrated here is [AlexNet](https://papers.nips.cc/paper/4824-image
 ![sample training images](imgs/sample_of_training_set.png)
 ## Results
 The original network from the paper gives the result on the left, we get the one on the right
-![their confusion](imgs/their_confusion.png) ![my confusion](imgs/myfigure.jpg)
+![their confusion](imgs/their_confusion.png) ![my confusion](imgs/confusion.png)
