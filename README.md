@@ -12,6 +12,7 @@ The model demonstrated here is [AlexNet](https://papers.nips.cc/paper/4824-image
 * `werkzeug`
 * `seaborn`
 * `TensorboardX` 
+* `imgaug`
 
 ## Web Interface
 Run the web interface on a server by calling the web.py script from `src/web/`. It will open an interface on the server's ip and it can be accessed from anywhere by searching
@@ -27,5 +28,6 @@ in your server. This will present an interface as following.
 You can upload your image and it will passed through the network loaded in `web.py`
 
 ## Results
+We get an evaluation accuracy of ~69% and test accuracy of 62% as opposed to +77% accuracy reported by the authors.
 The original network from the paper gives the result on the left, we get the one on the right
 ![their confusion](imgs/their_confusion.png) ![my confusion](imgs/confusion.png)
