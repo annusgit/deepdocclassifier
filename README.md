@@ -18,7 +18,9 @@ Run the web interface on a server by calling the web.py script from src/web/. It
 ```
 server_ip:8008/interface/
 ``` 
-in your server. This will present an interface as following. ![interface](imgs/interface.png). You can upload your image and it will passed through the network loaded in web.py
+in your server. This will present an interface as following.
+![interface](imgs/interface.png){style='center'} 
+You can upload your image and it will passed through the network loaded in web.py
 
 ## Results
 The original network from the paper gives the result on the left, we get the one on the right
