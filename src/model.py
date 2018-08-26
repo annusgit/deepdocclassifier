@@ -85,7 +85,7 @@ def check_on_dataloaders():
 
 
 if __name__ == '__main__':
-    check_on_dataloaders()
+    network()
 
 
 

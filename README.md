@@ -14,6 +14,12 @@ The model demonstrated here is [AlexNet](https://papers.nips.cc/paper/4824-image
 * `TensorboardX` 
 * `imgaug`
 
+## Model Summary
+<p align="center">
+  <img src="imgs/network_summary.png" width="350" title="Interface">
+</p> 
+
+
 ## Web Interface
 Run the web interface on a server by calling the web.py script from `src/web/`. It will open an interface on the server's ip and it can be accessed from anywhere by searching
 ```
